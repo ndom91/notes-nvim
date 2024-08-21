@@ -15,8 +15,8 @@ use {
   "ndom91/notes-nvim",
   requires = { "nvim-lua/plenary.nvim" },
   config = function()
-    require('freeze').setup({
-      fontSize = 12,
+    require('notes-nvim').setup({
+      rootDir = "/home/ndo/Documents/notebook",
     })
   end
 }

@@ -1,3 +1,4 @@
+local a = require("notes-nvim.async")
 local Config = require("notes-nvim.config")
 
 local M = {}
@@ -12,7 +13,7 @@ function M.parse_note_path(notePath)
   return {
     category = category,
     subcategory = subcategory,
-    week = week
+    week = week,
   }
 end
 
@@ -22,7 +23,7 @@ function M.parse_available_categories()
   local notes = {}
   local cmd = "find " .. rootDir .. " -mindepth 1 -maxdepth 1 -type d"
   local handle = io.popen(cmd)
-  if(!handle) then
+  if not handle then
     print("Error: No categories found in rootDir")
     return
   end
@@ -40,10 +41,25 @@ function M.parse_available_subcategories(category)
   local notes = {}
   local cmd = "find " .. rootDir .. "/" .. category .. " -mindepth 1 -maxdepth 1 -type d"
   local handle = io.popen(cmd)
-  if(!handle) then
+  if not handle then
     print("Error: No subcategories found")
     return
   end
+
+  -- local ok, out = pcall(vim.fn.system, {
+  --   "find",
+  --   rootDir .. "/" .. category .. " -mindepth 1 -maxdepth 1 -type d",
+  -- })
+  --
+  -- print('SUBCATEO')
+  --
+  -- if not ok or vim.v.shell_error ~= 0 then
+  --   vim.api.nvim_echo({
+  --     { "Error: No subcategories found\n", "ErrorMsg" },
+  --   }, true, {})
+  --   vim.fn.getchar()
+  --   return
+  -- end
 
   for line in handle:lines() do
     -- table.insert(notes, M.parse_note_path(line))
@@ -54,27 +70,50 @@ function M.parse_available_subcategories(category)
   return notes
 end
 
-function M.select_category_dirs()
+local select_category_dirs = a.sync(function()
   local available_categories = M.parse_available_categories()
-  local selected_category = ""
-  vim.ui.select(available_categories, {
-    prompt = "Select Category"
-  },function(selected)
-    selected_category = selected
-  end)
+  print("available_categories" .. vim.inspect(available_categories))
 
-  local available_subcategories = M.parse_available_subcategories(selected_category)
-  local selected_subcategory = ""
-  vim.ui.select(available_subcategories, {
-    prompt = "Select Subcategory"
-  },function(selected)
-    selected_subcategory = selected
-  end)
-
-  return {
-    category = selected_category,
-    subcategory = selected_subcategory
+  local categories = {
+    category = "",
+    subcategory = "",
   }
-end
+
+  vim.ui.select(available_categories, {
+    prompt = "Select Category",
+  }, function(selected_category)
+    print("selected_category" .. selected_category)
+    local available_subcategories = M.parse_available_subcategories(selected_category)
+
+    print("available_subcategories" .. vim.inspect(available_subcategories))
+    categories.subcategory = vim.ui.select(available_subcategories, {
+      prompt = "Select Subcategory",
+    }, function(selected_subcategory)
+      print("selected_subcategory" .. selected_subcategory)
+      return {
+        category = selected_category,
+        subcategory = selected_subcategory,
+      }
+    end)
+  end)
+
+  -- vim.ui.select(available_categories, {
+  --   prompt = "Select Category",
+  -- }, function(selected_category)
+  --   local available_subcategories = M.parse_available_subcategories(selected_category)
+  --   print("available_subcategories" .. vim.inspect(available_subcategories))
+  --
+  --   vim.ui.select(available_subcategories, {
+  --     prompt = "Select Subcategory",
+  --   }, function(selected_subcategory)
+  --     return {
+  --       category = selected_category,
+  --       subcategory = selected_subcategory,
+  --     }
+  --   end)
+  -- end)
+  return categories
+end)
+M.select_category_dirs = select_category_dirs
 
 return M

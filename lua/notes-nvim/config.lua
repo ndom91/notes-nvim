@@ -7,6 +7,7 @@ local defaults = {
 M.options = {}
 
 function M.setup(opts)
+  opts = opts or {}
   M.options = vim.tbl_deep_extend("force", defaults, opts)
 
   vim.api.nvim_create_user_command("NotesNew", function()
@@ -17,12 +18,6 @@ function M.setup(opts)
     --   return require("trouble.command").complete(...)
     -- end,
     desc = "Create Note",
-  })
-  vim.api.nvim_create_user_command("NotesListAll", function()
-    require("notes-nvim").list_notes()
-  end, {
-    nargs = "*",
-    desc = "List Note",
   })
   vim.api.nvim_create_user_command("NotesOpen", function()
     require("notes-nvim").open_note()
