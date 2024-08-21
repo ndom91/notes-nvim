@@ -1,6 +1,6 @@
-# notes-nvim
+# 📓 notes-nvim
 
-Neovim plugin to manage my personal notes system
+Neovim plugin to manage my personal notes.
 
 ## ⚡️ Requirements
 
