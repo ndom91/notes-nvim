@@ -1,16 +1,15 @@
-local a = require("notes-nvim.async")
 local Config = require("notes-nvim.config")
 local Parse = require("notes-nvim.parse")
 
 local M = {}
 
 function M.setup(opts)
-  vim.api.nvim_echo({
-    {
-      "Loading notes-nvim\n\n",
-      "DiagnosticInfo",
-    },
-  }, true, {})
+  -- vim.api.nvim_echo({
+  --   {
+  --     "Loading notes-nvim\n\n",
+  --     "DiagnosticInfo",
+  --   },
+  -- }, true, {})
 
   Config.setup(opts)
 end
@@ -34,17 +33,11 @@ end
 
 function M.open_note()
   local notes = M.list_notes()
-  -- local note = vim.fn.inputlist(notes)
-  -- if note == 0 then
-  --   return
-  -- end
 
-  local selected_note = ""
   vim.ui.select(notes, {
     prompt = "Open Note",
   }, function(selected)
-    selected_note = selected
-    vim.cmd("e " .. selected_note)
+    vim.cmd("e " .. selected)
   end)
 end
 
@@ -69,35 +62,66 @@ function M.create_new_week_dir()
 end
 
 function M.create_note()
-  local rootDir = Config.options.rootDir
   local note = vim.fn.input("Enter note name: ")
   if note == "" then
     return
   end
 
-  local cats
-  cats = a.wait(Parse.select_category_dirs())
-  print("Parsed Categories:")
-  print(vim.inspect(cats))
-  -- select_category_dirs is an async function
-  -- wait on its results before proceeding
+  local available_categories = M.parse_available_categories()
 
-  local week_number = "W" .. os.date("%V")
+  vim.ui.select(available_categories, {
+    prompt = "Select Category",
+  }, function(selected_category)
+    local available_subcategories = M.parse_available_subcategories(selected_category)
 
-  local notePath = rootDir
-    .. "/"
-    .. cats.category
-    .. "/"
-    .. cats.subcategory
-    .. "/"
-    .. week_number
-    .. "/"
-    .. note
-    .. ".md"
+    vim.ui.select(available_subcategories, {
+      prompt = "Select Subcategory",
+    }, function(selected_subcategory)
+      local week_number = "W" .. os.date("%V")
+      -- Try to create dir just in case
+      os.execute("mkdir -p " .. selected_subcategory .. "/" .. week_number)
 
-  local cmd = "touch " .. notePath
-  os.execute(cmd)
-  vim.cmd("e " .. notePath)
+      local notePath = selected_subcategory .. "/" .. week_number .. "/" .. note .. ".md"
+
+      os.execute("touch " .. notePath)
+      vim.cmd("e " .. notePath)
+    end)
+  end)
+end
+
+function M.parse_available_categories()
+  local rootDir = Config.options.rootDir
+  local notes = {}
+  local cmd = "find " .. rootDir .. " -mindepth 1 -maxdepth 1 -type d"
+  local handle = io.popen(cmd)
+  if not handle then
+    print("Error: No categories found in rootDir")
+    return
+  end
+
+  for line in handle:lines() do
+    table.insert(notes, line)
+  end
+  handle:close()
+
+  return notes
+end
+
+function M.parse_available_subcategories(category)
+  local notes = {}
+  local cmd = "find " .. category .. " -mindepth 1 -maxdepth 1 -type d"
+  local handle = io.popen(cmd)
+  if not handle then
+    print("Error: No subcategories found")
+    return
+  end
+
+  for line in handle:lines() do
+    table.insert(notes, line)
+  end
+  handle:close()
+
+  return notes
 end
 
 M.setup()
