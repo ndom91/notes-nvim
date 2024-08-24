@@ -1,36 +1,33 @@
-local Config = require("notes-nvim.config")
-local Parse = require("notes-nvim.parse")
+local config = require("notes-nvim.config")
+local util = require("notes-nvim.utils")
 
 local M = {}
 
 function M.setup(opts)
-  -- vim.api.nvim_echo({
-  --   {
-  --     "Loading notes-nvim\n\n",
-  --     "DiagnosticInfo",
-  --   },
-  -- }, true, {})
-
-  Config.setup(opts)
+  config.setup(opts)
 end
 
+-- Return table of all notes
+---@return string[]
 function M.list_notes()
-  local rootDir = Config.options.rootDir
+  local rootDir = config.options.rootDir
   local notes = {}
   local cmd = "find " .. rootDir .. " -type f -name '*.md'"
   local handle = io.popen(cmd)
   if not handle then
     print("Error: No notes found in rootDir: " .. rootDir)
-    return
+    return {}
   end
 
   for line in handle:lines() do
     table.insert(notes, line)
   end
   handle:close()
+
   return notes
 end
 
+-- Open note via fuzzy-find list
 function M.open_note()
   local notes = M.list_notes()
 
@@ -41,26 +38,7 @@ function M.open_note()
   end)
 end
 
-function M.create_new_week_dir()
-  local rootDir = Config.options.rootDir
-  local cats = Parse.select_category_dirs()
-  local week_number = "W" .. os.date("%V")
-
-  local week_path = rootDir .. "/" .. cats.category .. "/" .. cats.subcategory .. "/" .. week_number
-
-  if vim.fn.isdirectory(week_path) == 1 then
-    print("Week " .. week_number .. " directory already exists")
-    return
-  end
-
-  local note_path = week_path .. "/" .. "TODO.md"
-
-  os.execute("mkdir -p " .. week_path)
-  os.execute("touch " .. note_path)
-
-  vim.cmd("e " .. note_path)
-end
-
+-- Create a new note in the selected category and subcategory
 function M.create_note()
   local note = vim.fn.input("Enter note name: ")
   if note == "" then
@@ -78,8 +56,10 @@ function M.create_note()
       prompt = "Select Subcategory",
     }, function(selected_subcategory)
       local week_number = "W" .. os.date("%V")
-      -- Try to create dir just in case
-      os.execute("mkdir -p " .. selected_subcategory .. "/" .. week_number)
+
+      if not util.dir_exists(selected_subcategory .. "/" .. week_number) then
+        os.execute("mkdir -p " .. selected_subcategory .. "/" .. week_number)
+      end
 
       local notePath = selected_subcategory .. "/" .. week_number .. "/" .. note .. ".md"
 
@@ -89,14 +69,16 @@ function M.create_note()
   end)
 end
 
+-- Parse available top-level categories in rootDir
+---@return string[]
 function M.parse_available_categories()
-  local rootDir = Config.options.rootDir
+  local rootDir = config.options.rootDir
   local notes = {}
   local cmd = "find " .. rootDir .. " -mindepth 1 -maxdepth 1 -type d"
   local handle = io.popen(cmd)
   if not handle then
     print("Error: No categories found in rootDir")
-    return
+    return {}
   end
 
   for line in handle:lines() do
@@ -107,13 +89,16 @@ function M.parse_available_categories()
   return notes
 end
 
+-- Parse available subcategories in a category
+---@param category string
+---@return string[]
 function M.parse_available_subcategories(category)
   local notes = {}
   local cmd = "find " .. category .. " -mindepth 1 -maxdepth 1 -type d"
   local handle = io.popen(cmd)
   if not handle then
     print("Error: No subcategories found")
-    return
+    return {}
   end
 
   for line in handle:lines() do

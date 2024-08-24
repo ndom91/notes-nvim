@@ -23,13 +23,7 @@ function M.setup(opts)
     require("notes-nvim").open_note()
   end, {
     nargs = "*",
-    desc = "List Note",
-  })
-  vim.api.nvim_create_user_command("NotesCreateNewWeek", function()
-    require("notes-nvim").create_new_week_dir()
-  end, {
-    nargs = "*",
-    desc = "Notes Create New Week",
+    desc = "Open Note",
   })
 end
 
