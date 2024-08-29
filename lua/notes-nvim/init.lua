@@ -7,6 +7,8 @@ function M.setup(opts)
   config.setup(opts)
 end
 
+M.setup()
+
 -- Return table of all notes
 ---@return string[]
 function M.list_notes()
@@ -46,15 +48,14 @@ function M.create_week_note()
     return
   end
 
-  local available_categories = M.parse_available_categories()
+  local available_categories = M.parse_available_directories(rootDir)
 
   vim.ui.select(available_categories, {
     prompt = "Select Category",
   }, function(selected_category)
     local selected_category_dir = vim.fs.basename(selected_category)
-    local available_subcategories = M.parse_available_subcategories(selected_category_dir)
+    local available_subcategories = M.parse_available_directories(util.join_paths({ rootDir, selected_category_dir }))
 
-    -- No subcategories found; Create new
     if not available_subcategories then
       local new_subcategory = vim.fn.input("No subcategories found, enter new name:")
       os.execute("mkdir -p " .. util.join_paths({ rootDir, selected_category, new_subcategory }))
@@ -67,11 +68,16 @@ function M.create_week_note()
       local selected_subcategory_dir = vim.fs.basename(selected_subcategory)
       local week_number = "W" .. os.date("%V")
 
-      if not util.dir_exists(util.join_paths({ rootDir, selected_category_dir, selected_subcategory_dir, week_number })) then
-        os.execute("mkdir -p " .. util.join_paths({ rootDir, selected_category_dir, selected_subcategory_dir, week_number }))
+      if
+        not util.dir_exists(util.join_paths({ rootDir, selected_category_dir, selected_subcategory_dir, week_number }))
+      then
+        os.execute(
+          "mkdir -p " .. util.join_paths({ rootDir, selected_category_dir, selected_subcategory_dir, week_number })
+        )
       end
 
-      local notePath = util.join_paths({ rootDir, selected_category_dir, selected_subcategory_dir, week_number, note .. '.md' })
+      local notePath =
+        util.join_paths({ rootDir, selected_category_dir, selected_subcategory_dir, week_number, note .. ".md" })
 
       os.execute("touch " .. notePath)
       vim.cmd("e " .. notePath)
@@ -87,15 +93,14 @@ function M.create_note()
     return
   end
 
-  local available_categories = M.parse_available_categories()
+  local available_categories = M.parse_available_directories(rootDir)
 
   vim.ui.select(available_categories, {
     prompt = "Select Category",
   }, function(selected_category)
-    local selected_dir = vim.fs.basename(selected_category)
-    local available_subcategories = M.parse_available_subcategories(selected_dir)
+    local selected_category_dir = vim.fs.basename(selected_category)
+    local available_subcategories = M.parse_available_directories(util.join_paths({ rootDir, selected_category_dir }))
 
-    -- No subcategories found; Create new
     if not available_subcategories then
       local new_subcategory = vim.fn.input("No subcategories found, enter new name:")
       os.execute("mkdir -p " .. util.join_paths({ rootDir, selected_category, new_subcategory }))
@@ -107,11 +112,11 @@ function M.create_note()
     }, function(selected_subcategory)
       local selected_subcategory_dir = vim.fs.basename(selected_subcategory)
 
-      if not util.dir_exists(util.join_paths({ rootDir, selected_dir, selected_subcategory_dir })) then
-        os.execute("mkdir -p " .. util.join_paths({ rootDir, selected_dir, selected_subcategory_dir }))
+      if not util.dir_exists(util.join_paths({ rootDir, selected_category_dir, selected_subcategory_dir })) then
+        os.execute("mkdir -p " .. util.join_paths({ rootDir, selected_category_dir, selected_subcategory_dir }))
       end
 
-      local notePath = util.join_paths({ rootDir, selected_dir, selected_subcategory_dir, note .. '.md' })
+      local notePath = util.join_paths({ rootDir, selected_category_dir, selected_subcategory_dir, note .. ".md" })
 
       os.execute("touch " .. notePath)
       vim.cmd("e " .. notePath)
@@ -120,46 +125,23 @@ function M.create_note()
 end
 
 -- Parse available top-level categories in rootDir
+---@param directory string
 ---@return string[]
-function M.parse_available_categories()
-  local rootDir = config.options.rootDir
-  local cmd = "find " .. rootDir .. " -mindepth 1 -maxdepth 1 -type d"
+function M.parse_available_directories(directory)
+  local cmd = "find " .. directory .. " -mindepth 1 -maxdepth 1 -type d"
   local handle = io.popen(cmd)
   if not handle then
-    print("Error: No categories found in rootDir")
+    print("Error: " .. directory .. " not found")
     return {}
   end
 
-  local notes = {}
+  local entries = {}
   for line in handle:lines() do
-    table.insert(notes, line)
+    table.insert(entries, line)
   end
   handle:close()
 
-  return notes
+  return entries
 end
-
--- Parse available subcategories in selected category
----@param category string
----@return string[]
-function M.parse_available_subcategories(category)
-  local rootDir = config.options.rootDir
-  local cmd = "find " .. util.join_paths({ rootDir, category }) .. " -mindepth 1 -maxdepth 1 -type d"
-  local handle = io.popen(cmd)
-  if not handle then
-    print("Error: No subcategories found")
-    return {}
-  end
-
-  local notes = {}
-  for line in handle:lines() do
-    table.insert(notes, line)
-  end
-  handle:close()
-
-  return notes
-end
-
-M.setup()
 
 return M
