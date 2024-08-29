@@ -36,7 +36,9 @@ function M.open_note()
   vim.ui.select(notes, {
     prompt = "Open Note",
   }, function(selected)
-    vim.cmd("e " .. selected)
+    if selected then
+      vim.cmd("e " .. selected)
+    end
   end)
 end
 
