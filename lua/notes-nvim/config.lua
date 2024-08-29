@@ -13,16 +13,18 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("NotesNew", function()
     require("notes-nvim").create_note()
   end, {
-    nargs = "*",
-    -- complete = function(...)
-    --   return require("trouble.command").complete(...)
-    -- end,
-    desc = "Create Note",
+    desc = "Create Weekly Note",
   })
+
+  vim.api.nvim_create_user_command("NotesNewWeek", function()
+    require("notes-nvim").create_week_note()
+  end, {
+    desc = "Create Weekly Note",
+  })
+
   vim.api.nvim_create_user_command("NotesOpen", function()
     require("notes-nvim").open_note()
   end, {
-    nargs = "*",
     desc = "Open Note",
   })
 end
